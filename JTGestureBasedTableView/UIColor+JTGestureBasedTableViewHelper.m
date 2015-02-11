@@ -9,6 +9,7 @@
 #import "UIColor+JTGestureBasedTableViewHelper.h"
 
 @implementation UIColor (JTGestureBasedTableViewHelper)
+
 - (UIColor *)colorWithBrightness:(CGFloat)brightnessComponent {
     
     UIColor *newColor = nil;

@@ -8,38 +8,36 @@
 
 #import <UIKit/UIKit.h>
 
-typedef enum {
-    JTTransformableTableViewCellStyleUnfolding,
-    JTTransformableTableViewCellStylePullDown,
-} JTTransformableTableViewCellStyle;
-
+typedef NS_ENUM(int, JTTransformableTableViewCellStyle) { JTTransformableTableViewCellStyleUnfolding,
+                                                          JTTransformableTableViewCellStylePullDown
+};
 
 @protocol JTTransformableTableViewCell <NSObject>
 
-@property (nonatomic, assign) CGFloat  finishedHeight;
-@property (nonatomic, strong) UIColor *tintColor;   // default is white color
+@property (nonatomic) CGFloat   finishedHeight;
+@property (nonatomic) UIColor * tintColor;   // default is white color
 
 @end
 
 
 @interface JTTransformableTableViewCell : UITableViewCell <JTTransformableTableViewCell>
 
-// Use this factory method instead of 
-// - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier;
-+ (JTTransformableTableViewCell *)transformableTableViewCellWithStyle:(JTTransformableTableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier;
+// Use the factory method below instead of
+//- initWithStyle:(UITableViewCellStyle)s reuseIdentifier:(NSString *)_ __attribute__((unavailable));
 
++ (JTTransformableTableViewCell*) transformableTableViewCellWithStyle:(JTTransformableTableViewCellStyle)s
+                                                      reuseIdentifier:(NSString*)_;
 @end
 
 
 @interface JTUnfoldingTableViewCell : JTTransformableTableViewCell
 
-@property (nonatomic, strong) UIView *transformable1HalfView;
-@property (nonatomic, strong) UIView *transformable2HalfView;
+@property (nonatomic) UIView *transformable1HalfView, *transformable2HalfView;
 
 @end
 
 @interface JTPullDownTableViewCell : JTTransformableTableViewCell
 
-@property (nonatomic, strong) UIView *transformableView;
+@property (nonatomic) UIView *transformableView;
 
 @end
