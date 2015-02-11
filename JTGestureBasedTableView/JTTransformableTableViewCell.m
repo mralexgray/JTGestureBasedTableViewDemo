@@ -18,18 +18,20 @@
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
 {
   if (!(self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) return nil;
-  CATransform3D transform = CATransform3DIdentity;
-  transform.m34 = -1/500.f;
-  [self.contentView.layer setSublayerTransform:transform];
 
-  self.transformable1HalfView = [[UIView alloc] initWithFrame:self.contentView.bounds];
-  [self.transformable1HalfView.layer setAnchorPoint:CGPointMake(0.5, 0.0)];
-  [self.transformable1HalfView setClipsToBounds:YES];
+  CATransform3D transform = CATransform3DIdentity;
+            transform.m34 = -1/500.f;
+
+  self.contentView.layer.sublayerTransform = transform;
+
+  _transformable1HalfView = [UIView.alloc initWithFrame:self.contentView.bounds];
+  _transformable1HalfView.layer.anchorPoint = CGPointMake(0.5, 0.0);
+  _transformable1HalfView.clipsToBounds = YES;
   [self.contentView addSubview:self.transformable1HalfView];
 
-  self.transformable2HalfView = [[UIView alloc] initWithFrame:self.contentView.bounds];
-  [self.transformable2HalfView.layer setAnchorPoint:CGPointMake(0.5, 1.0)];
-  [self.transformable2HalfView setClipsToBounds:YES];
+  _transformable2HalfView = [UIView.alloc initWithFrame:self.contentView.bounds];
+  _transformable2HalfView.layer.anchorPoint = CGPointMake(0.5, 1.0);
+  _transformable2HalfView.clipsToBounds = YES;
   [self.contentView addSubview:self.transformable2HalfView];
 
   self.selectionStyle = UITableViewCellSelectionStyleNone;
@@ -47,23 +49,23 @@
 {
   [super layoutSubviews];
 
-  CGFloat fraction = (self.frame.size.height / self.finishedHeight);
-  fraction = MAX(MIN(1, fraction), 0);
+  CGFloat fraction = MAX(MIN(1, (self.frame.size.height / self.finishedHeight)), 0);
 
   CGFloat angle = (M_PI / 2) - asinf(fraction);
-  CATransform3D transform = CATransform3DMakeRotation(angle, -1, 0, 0);
-  [self.transformable1HalfView.layer setTransform:transform];
-  [self.transformable2HalfView.layer setTransform:CATransform3DMakeRotation(angle, 1, 0, 0)];
+
+
+  _transformable1HalfView.layer.transform = CATransform3DMakeRotation(angle, -1, 0, 0);
+  _transformable2HalfView.layer.transform = CATransform3DMakeRotation(angle, 1, 0, 0);
 
   self.transformable1HalfView.backgroundColor = [self.tintColor colorWithBrightness:0.3 + 0.7*fraction];
   self.transformable2HalfView.backgroundColor = [self.tintColor colorWithBrightness:0.5 + 0.5*fraction];
 
-  CGSize contentViewSize = self.contentView.frame.size;
-  CGFloat contentViewMidY = contentViewSize.height / 2;
-  CGFloat labelHeight = self.finishedHeight / 2;
+  CGSize  contentViewSize = self.contentView.frame.size;
+  CGFloat contentViewMidY = contentViewSize.height / 2,
+              labelHeight = self.finishedHeight    / 2;
 
-    // OPTI: Always accomodate 1 px to the top label to ensure two labels
-    // won't display one px gap in between sometimes for certain angles
+  // OPTI: Always accomodate 1 px to the top label to ensure two labels
+  // won't display one px gap in between sometimes for certain angles
   self.transformable1HalfView.frame = CGRectMake(0, contentViewMidY - (labelHeight * fraction),
                                                  contentViewSize.width, labelHeight + 1);
   self.transformable2HalfView.frame = CGRectMake(0, contentViewMidY - (labelHeight * (1 - fraction)),
@@ -182,9 +184,21 @@
 
   } else {
 
-    requiredLabelSize = [self.textLabel.text sizeWithFont:self.textLabel.font
-                                        constrainedToSize:contentViewSize
-                                            lineBreakMode:NSLineBreakByClipping];
+//  CGSize size = [self.textLabel.text sizeWithAttributes:@{NSFontAttributeName: self.textLabel.font}];
+
+  // Values are fractional -- you should take the ceilf to get equivalent values
+//  CGSize adjustedSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
+
+//    requiredLabelSize = adjustedSize; //[self.textLabel.text sizeWithFont:self.textLabel.font
+                                       // constrainedToSize:contentViewSize
+                                         //   lineBreakMode:NSLineBreakByClipping];
+
+  NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:self.textLabel.text attributes:@{NSFontAttributeName:self.textLabel.font}];
+  CGRect rect = [attributedText boundingRectWithSize:contentViewSize
+                                           options:NSStringDrawingTruncatesLastVisibleLine // NSStringDrawingUsesLineFragmentOrigin
+                                           context:nil];
+    requiredLabelSize = (CGSize){ ceilf(rect.size.width),ceilf(rect.size.height)};
+
   }
 
   self.imageView.frame = CGRectMake(10.0 + requiredLabelSize.width + 10.0,

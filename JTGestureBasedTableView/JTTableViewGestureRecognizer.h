@@ -1,86 +1,73 @@
-/*
- * This file is part of the JTGestureBasedTableView package.
- * (c) James Tang <mystcolor@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
 
-#import <UIKit/UIKit.h>
+@import UIKit;
 
-typedef NS_ENUM(NSInteger, JTTableViewCellEditingState) {
-    JTTableViewCellEditingStateMiddle,
-    JTTableViewCellEditingStateLeft,
-    JTTableViewCellEditingStateRight,
-} ;
+#import "UIColor+JTGestureBasedTableViewHelper.h"
+#import "JTTransformableTableViewCell.h"
 
-extern CGFloat const JTTableViewCommitEditingRowDefaultLength;
-
-// JTTableViewRowAnimationDuration is decided to be as close as the internal settings of UITableViewRowAnimation duration
-extern CGFloat const JTTableViewRowAnimationDuration;
-
-@protocol JTTableViewGestureAddingRowDelegate, JTTableViewGestureEditingRowDelegate, JTTableViewGestureMoveRowDelegate;
+#define GRMethod(RET_TYPE) - (RET_TYPE) gestureRecognizer:(JTTableViewGestureRecognizer*)gr
 
 @interface JTTableViewGestureRecognizer : NSObject <UITableViewDelegate>
 
-@property (weak, readonly) UITableView *tableView;
+@property (weak,readonly) UITableView *tableView;
 
-+ (JTTableViewGestureRecognizer*) gestureRecognizerWithTableView:(UITableView*)_ delegate:d;
++ (instancetype) gestureRecognizerWithTableView:(UITableView*)_ delegate:d;
 
 @end
+
 
 #pragma mark - Conform to JTTableViewGestureAddingRowDelegate to enable features: - drag down to add cell & - pinch to add cell
 
 @protocol JTTableViewGestureAddingRowDelegate <NSObject>
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr     needsAddRowAtIndexPath:(NSIndexPath*)ip;
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr  needsCommitRowAtIndexPath:(NSIndexPath*)ip;
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr needsDiscardRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)               needsAddRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)            needsCommitRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)           needsDiscardRowAtIndexPath:(NSIndexPath*)ip;
 
 @optional
 
-- (NSIndexPath*) gestureRecognizer:(JTTableViewGestureRecognizer*)gr         willCreateCellAtIndexPath:(NSIndexPath*)ip;
-- (CGFloat)      gestureRecognizer:(JTTableViewGestureRecognizer*)gr heightForCommittingRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(NSIndexPath*)    willCreateCellAtIndexPath:(NSIndexPath*)ip;
+GRMethod(CGFloat) heightForCommittingRowAtIndexPath:(NSIndexPath*)ip;
 
 @end
 
+typedef NS_ENUM(NSInteger, JTTableViewCellEditingState) { JTTableViewCellEditingStateMiddle,
+                                                          JTTableViewCellEditingStateLeft,
+                                                          JTTableViewCellEditingStateRight };
 
 #pragma mark - Conform to JTTableViewGestureEditingRowDelegate to enable features - swipe to edit cell
 
-@protocol JTTableViewGestureEditingRowDelegate <NSObject>
+@protocol JTTableViewGestureEditingRowDelegate <NSObject> @required // Panning
 
-@required // Panning
+GRMethod(BOOL) canEditRowAtIndexPath:(NSIndexPath*)ip;
 
-- (BOOL) gestureRecognizer:(JTTableViewGestureRecognizer*)gr canEditRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)  didEnterEditingState:(JTTableViewCellEditingState)_
+                   forRowAtIndexPath:(NSIndexPath*)ip;
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr  didEnterEditingState:(JTTableViewCellEditingState)state
-                                                                 forRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)    commitEditingState:(JTTableViewCellEditingState)_
+                   forRowAtIndexPath:(NSIndexPath*)ip;
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr    commitEditingState:(JTTableViewCellEditingState)state
-                                                                 forRowAtIndexPath:(NSIndexPath*)ip;
 @optional
 
-- (CGFloat)gestureRecognizer:(JTTableViewGestureRecognizer*)gr lengthForCommitEditingRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(CGFloat) lengthForCommitEditingRowAtIndexPath:(NSIndexPath*)ip;
 
-- (void)   gestureRecognizer:(JTTableViewGestureRecognizer*)gr      didChangeContentViewTranslation:(CGPoint)translation
-                                                                                  forRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)         didChangeContentViewTranslation:(CGPoint)translation
+                                     forRowAtIndexPath:(NSIndexPath*)ip;
 @end
 
 #pragma mark - Conform to JTTableViewGestureMoveRowDelegate to enable features - long press to reorder cell
 
 @protocol JTTableViewGestureMoveRowDelegate <NSObject>
 
-- (BOOL) gestureRecognizer:(JTTableViewGestureRecognizer*)gr                    canMoveRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(BOOL)                    canMoveRowAtIndexPath:(NSIndexPath*)ip;
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr  needsCreatePlaceholderForRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void)  needsCreatePlaceholderForRowAtIndexPath:(NSIndexPath*)ip;
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr                  needsMoveRowAtIndexPath:(NSIndexPath*)sourceIP
-                                                                                          toIndexPath:(NSIndexPath *)destinationIP;
+GRMethod(void)                  needsMoveRowAtIndexPath:(NSIndexPath*)sourceIP
+                                            toIndexPath:(NSIndexPath*)destinationIP;
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gr needsReplacePlaceholderForRowAtIndexPath:(NSIndexPath*)ip;
+GRMethod(void) needsReplacePlaceholderForRowAtIndexPath:(NSIndexPath*)ip;
 
 @end
-
 
 @interface UITableView (JTTableViewGestureDelegate)
 
@@ -89,3 +76,18 @@ extern CGFloat const JTTableViewRowAnimationDuration;
 - (void) reloadVisibleRowsExceptIndexPath:(NSIndexPath*)ip; // Helper methods for updating cell after datasource changes
 
 @end
+
+extern CGFloat const JTTableViewCommitEditingRowDefaultLength, JTTableViewRowAnimationDuration;
+
+/*
+  @protocol JTTableViewGestureAddingRowDelegate, JTTableViewGestureEditingRowDelegate, JTTableViewGestureMoveRowDelegate;
+
+  JTTableViewRowAnimationDuration is decided to be as close as the internal settings of UITableViewRowAnimation duration
+
+ * This file is part of the JTGestureBasedTableView package.
+ * (c) James Tang <mystcolor@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+

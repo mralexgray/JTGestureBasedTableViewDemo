@@ -8,48 +8,27 @@
 
 @import AtoZTouch;
 
-
 #import "ViewController.h"
-#import "JTTransformableTableViewCell.h"
-#import "JTTableViewGestureRecognizer.h"
-#import "UIColor+JTGestureBasedTableViewHelper.h"
 
-/*! Configure your viewController to conform to JTTableViewGestureEditingRowDelegate and/or JTTableViewGestureAddingRowDelegate,.
-    depends on your needs !
- */
-
-@interface ViewController () < JTTableViewGestureEditingRowDelegate,
-                               JTTableViewGestureAddingRowDelegate,
-                               JTTableViewGestureMoveRowDelegate    >
-
-@property (nonatomic) NSArray *rows;
-@property (nonatomic) JTTableViewGestureRecognizer *tableViewRecognizer;
-@property (nonatomic) id grabbedObject;
-@end
-
-@implementation ViewController // @synthesize rows, tableViewRecognizer, grabbedObject;
-
-#define ADDING_CELL @"Continue..."
-#define DONE_CELL @"Done"
-#define DUMMY_CELL @"Dummy"
-#define COMMITING_CREATE_CELL_HEIGHT 60
-#define NORMAL_CELL_FINISHING_HEIGHT 60
+@implementation ViewController
 
 #pragma mark - View lifecycle
 
 - (void) viewDidLoad {
+
   [super viewDidLoad];
-    // In this example, we setup self.rows as datasource
-  _rows =@[ @"Swipe to the right to complete",
-            @"Swipe to left to delete",
-            @"Drag down to create a new cell",
-            @"Pinch two rows apart to create cell",
-            @"Long hold to start reorder cell"];
 
+  // In this example, we setup self.rows as datasource
 
-    // Setup your tableView.delegate and tableView.datasource,
-    // then enable gesture recognition in one line.
-  _tableViewRecognizer = [self.tableView enableGestureTableViewWithDelegate:self];
+  _rows = @[  @"Swipe to the right to complete",
+              @"Swipe to left to delete",
+              @"Drag down to create a new cell",
+              @"Pinch two rows apart to create cell",
+              @"Long hold to start reorder cell"].mutableCopy;
+
+  // Setup your tableView.delegate and tableView.datasource, then enable gesture recognition in one line.
+
+  self.tableViewRecognizer = [self.tableView enableGestureTableViewWithDelegate:self];
 
   self.tableView.backgroundColor = UIColor.blackColor;
   self.tableView.separatorStyle  = UITableViewCellSeparatorStyleNone;
@@ -58,35 +37,38 @@
 
 #pragma mark Private Method
 
-- (void) moveRowToBottomForIndexPath:(NSIndexPath*)ip { __block NSIndexPath *lastIndexPath;
+- (void) moveRowToBottomForIndexPath:(NSIndexPath*)ip {
+
+  __block NSIndexPath *lastIP;
 
   [self.tableView update:^(UITableView *tv) {
 
     id object = _rows[ip.row];
-    [[self mutableArrayValueForKey:@"rows"] removeObjectAtIndex:ip.row];
-    [[self mutableArrayValueForKey:@"rows"] addObject:object];
+    [_rows removeObjectAtIndex:ip.row];
+    [_rows addObject:object];
 
-    [tv moveRowAtIndexPath:ip toIndexPath:lastIndexPath = [NSIndexPath indexPathForRow:self.rows.count - 1 inSection:0]];
+    lastIP = [NSIndexPath indexPathForRow:_rows.count - 1 inSection:0];
+    [tv moveRowAtIndexPath:ip toIndexPath:lastIP];
 
   }];
 
-  [self.tableView performSelector:@selector(reloadVisibleRowsExceptIndexPath:) withObject:lastIndexPath
-                       afterDelay:JTTableViewRowAnimationDuration];
+  [self.tableView performSelector:@selector(reloadVisibleRowsExceptIndexPath:) withObject:lastIP afterDelay:JTTableViewRowAnimationDuration];
 }
 
 #pragma mark UITableViewDatasource
 
-TVNumRowsInSection { return [self.rows count]; }
+
+TVNumRowsInSection { return _rows.count; }
 
 TVNumSections      { return 1; }
 
-TVCellForRowAtIP   {
+TVCellForRowAtIP   { NSObject *object;
 
-  NSObject *object = (self.rows)[ip.row];
   UIColor *backgroundColor = [UIColor.redColor colorWithHueOffset:0.12 * ip.row /
-                         [self tableView:tv numberOfRowsInSection:ip.section]];
+                             [self tableView:tv numberOfRowsInSection:ip.section]];
 
-  if ([object isEqual:ADDING_CELL]) {
+  if ([(object = _rows[ip.row]) isEqual:ADDING_CELL]) {
+
     NSString *cellIdentifier = nil;
     JTTransformableTableViewCell *cell = nil;
 
@@ -150,24 +132,33 @@ TVCellForRowAtIP   {
       return cell;
     }
 
-  } else {
+  }
+
+  else {
 
     static NSString *cellIdentifier = @"MyCell";
-    UITableViewCell *cell = [tv dequeueReusableCellWithIdentifier:cellIdentifier];
-    if (cell == nil) {
-      cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+    UITableViewCell *cell = [tv dequeueReusableCellWithIdentifier:cellIdentifier] ?: ({
+
+      cell = [UITableViewCell.alloc initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
       cell.textLabel.adjustsFontSizeToFitWidth = YES;
       cell.textLabel.backgroundColor = UIColor.clearColor;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    }
+      cell;
 
-    cell.textLabel.text = [NSString stringWithFormat:@"%@", (NSString *)object];
+    });
+
+    cell.textLabel.text = (NSString *)object;
+
     if ([object isEqual:DONE_CELL]) {
-      cell.textLabel.textColor = UIColor.grayColor;
+
+        cell.textLabel.textColor         = UIColor.grayColor;
       cell.contentView.backgroundColor = UIColor.darkGrayColor;
+
     } else if ([object isEqual:DUMMY_CELL]) {
+
       cell.textLabel.text = @"";
       cell.contentView.backgroundColor = UIColor.clearColor;
+
     } else {
       cell.textLabel.textColor = UIColor.whiteColor;
       cell.contentView.backgroundColor = backgroundColor;
@@ -186,26 +177,24 @@ TVHeightForRowAtIP { return NORMAL_CELL_FINISHING_HEIGHT; }
 TVDidSelectRowAtIP { NSLog(@"tableView:didSelectRowAtIndexPath: %@", ip); }
 
 
-#pragma mark - JTTableViewGestureAddingRowDelegate
+#pragma mark - ADDING (JTTableViewGestureAddingRowDelegate)
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsAddRowAtIndexPath:(NSIndexPath*)ip {
+GRMethod(void)    needsAddRowAtIndexPath:(NSIndexPath*)ip { [self.rows insertObject:ADDING_CELL atIndex:ip.row]; }
 
-  [[self mutableArrayValueForKey:@"rows"] insertObject:ADDING_CELL atIndex:ip.row];
-}
+GRMethod(void) needsCommitRowAtIndexPath:(NSIndexPath*)ip {
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsCommitRowAtIndexPath:(NSIndexPath*)ip {
+  self.rows[ip.row] = @"Added!";
 
-  [[self mutableArrayValueForKey:@"rows"] insertObject:@"Added!"  atIndex:ip.row];
-
-  JTTransformableTableViewCell *cell = (id)[gRec.tableView cellForRowAtIndexPath:ip];
+  JTTransformableTableViewCell *cell = (id)[gr.tableView cellForRowAtIndexPath:ip];
 
   BOOL isFirstCell = ip.section == 0 && ip.row == 0;
+
   if (isFirstCell && cell.frame.size.height > COMMITING_CREATE_CELL_HEIGHT * 2) {
-    [[self mutableArrayValueForKey:@"rows"] removeObjectAtIndex:ip.row];
-    [self.tableView deleteRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationMiddle];
-      // Return to list
-  }
-  else {
+
+    [self.rows removeObjectAtIndex:ip.row];
+    [self.tableView deleteRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationMiddle];  // Return to list
+
+  } else {
 
     cell.finishedHeight = NORMAL_CELL_FINISHING_HEIGHT;
     cell.imageView.image = nil;
@@ -213,10 +202,7 @@ TVDidSelectRowAtIP { NSLog(@"tableView:didSelectRowAtIndexPath: %@", ip); }
   }
 }
 
-- (void) gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsDiscardRowAtIndexPath:(NSIndexPath*)ip {
-
-  [[self mutableArrayValueForKey:@"rows"] removeObjectAtIndex:ip.row];
-}
+GRMethod(void) needsDiscardRowAtIndexPath:(NSIndexPath*)ip { [self.rows removeObjectAtIndex:ip.row]; }
 
   // Uncomment to following code to disable pinch in to create cell gesture
   //- (NSIndexPath *)gestureRecognizer:(JTTableViewGestureRecognizer *)gestureRecognizer willCreateCellAtIndexPath:(NSIndexPath *)indexPath {
@@ -228,47 +214,39 @@ TVDidSelectRowAtIP { NSLog(@"tableView:didSelectRowAtIndexPath: %@", ip); }
 
 #pragma mark JTTableViewGestureEditingRowDelegate
 
-- (void)gestureRecognizer:(JTTableViewGestureRecognizer *)gestureRecognizer didEnterEditingState:(JTTableViewCellEditingState)state forRowAtIndexPath:(NSIndexPath *)indexPath {
-  UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPath];
+GRMethod(void) didEnterEditingState:(JTTableViewCellEditingState)state forRowAtIndexPath:(NSIndexPath*)ip {
 
-  UIColor *backgroundColor = nil;
-  switch (state) {
-    case JTTableViewCellEditingStateMiddle:
-      backgroundColor = [UIColor.redColor colorWithHueOffset:0.12 * indexPath.row / [self tableView:self.tableView numberOfRowsInSection:indexPath.section]];
-      break;
-    case JTTableViewCellEditingStateRight:
-      backgroundColor = UIColor.greenColor;
-      break;
-    default:
-      backgroundColor = UIColor.darkGrayColor;
-      break;
-  }
+  UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:ip];
+
+  UIColor *backgroundColor = state == JTTableViewCellEditingStateMiddle
+                           ? [UIColor.redColor colorWithHueOffset:0.12 * ip.row / [self tableView:self.tableView numberOfRowsInSection:ip.section]]
+                           : state == JTTableViewCellEditingStateRight
+                           ? UIColor.greenColor
+                           : UIColor.darkGrayColor;
+
   cell.contentView.backgroundColor = backgroundColor;
-  if ([cell isKindOfClass:[JTTransformableTableViewCell class]]) {
-    ((JTTransformableTableViewCell *)cell).tintColor = backgroundColor;
-  }
+
+  if ([cell isKindOfClass:JTTransformableTableViewCell.class]) ((JTTransformableTableViewCell *)cell).tintColor = backgroundColor;
 }
 
-  // This is needed to be implemented to let our delegate choose whether the panning gesture should work
-- (BOOL)gestureRecognizer:(JTTableViewGestureRecognizer *)gestureRecognizer canEditRowAtIndexPath:(NSIndexPath *)indexPath {
-  return YES;
-}
+// This is needed to be implemented to let our delegate choose whether the panning gesture should work
 
-- (void)gestureRecognizer:(JTTableViewGestureRecognizer*)gRec commitEditingState:(JTTableViewCellEditingState)state forRowAtIndexPath:(NSIndexPath *)ip {
+GRMethod(BOOL) canEditRowAtIndexPath:(NSIndexPath*)ip { return YES; }
+
+GRMethod(void) commitEditingState:(JTTableViewCellEditingState)state forRowAtIndexPath:(NSIndexPath *)ip {
 
   __block NSIndexPath *rowToBeMovedToBottom = nil;
 
-  [gRec.tableView update:^(UITableView *tv) {
+  [gr.tableView update:^(UITableView *tv) {
 
     state == JTTableViewCellEditingStateLeft ? // An example to discard the cell at JTTableViewCellEditingStateLeft
 
-      [[self mutableArrayValueForKey:@"rows"] removeObjectAtIndex:ip.row],
-             [tv deleteRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationLeft] :
+      [self.rows removeObjectAtIndex:ip.row], [tv deleteRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationLeft] :
 
     state == JTTableViewCellEditingStateRight ? ({
 
         // An example to retain the cell at commiting at JTTableViewCellEditingStateRight
-      [[self mutableArrayValueForKey:@"rows"] insertObject:DONE_CELL atIndex:ip.row];
+      self.rows[ip.row] = DONE_CELL;
 
       [tv reloadRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationLeft];
 
@@ -282,33 +260,36 @@ TVDidSelectRowAtIP { NSLog(@"tableView:didSelectRowAtIndexPath: %@", ip); }
 
 
   // Row color needs update after datasource changes, reload it.
-  [gRec.tableView performSelector:@selector(reloadVisibleRowsExceptIndexPath:) withObject:ip afterDelay:JTTableViewRowAnimationDuration];
+  [gr.tableView performSelector:@selector(reloadVisibleRowsExceptIndexPath:) withObject:ip
+                     afterDelay:JTTableViewRowAnimationDuration];
 
   if (rowToBeMovedToBottom)
-   [self performSelector:@selector(moveRowToBottomForIndexPath:) withObject:rowToBeMovedToBottom afterDelay:JTTableViewRowAnimationDuration * 2];
+   [self performSelector:@selector(moveRowToBottomForIndexPath:) withObject:rowToBeMovedToBottom
+              afterDelay:JTTableViewRowAnimationDuration * 2];
 }
 
 #pragma mark JTTableViewGestureMoveRowDelegate
 
-- (BOOL) gestureRecognizer:(JTTableViewGestureRecognizer *)gRec canMoveRowAtIndexPath:(NSIndexPath *)ip { return YES; }
+GRMethod(BOOL) canMoveRowAtIndexPath:(NSIndexPath *)ip { return YES; }
 
-- (void)gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsCreatePlaceholderForRowAtIndexPath:(NSIndexPath*)ip {
+GRMethod(void) needsCreatePlaceholderForRowAtIndexPath:(NSIndexPath*)ip {
 
   self.grabbedObject = self.rows[ip.row];
-  [[self mutableArrayValueForKey:@"rows"] insertObject:DUMMY_CELL atIndex:ip.row];
+   self.rows[ip.row] = DUMMY_CELL;
 }
 
-- (void)gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsMoveRowAtIndexPath:(NSIndexPath*)sourceIP
-                                                                          toIndexPath:(NSIndexPath*)destinationIP {
+GRMethod(void) needsMoveRowAtIndexPath:(NSIndexPath*)sourceIP toIndexPath:(NSIndexPath*)destinationIP {
 
   id object = _rows[sourceIP.row];
-  [[self mutableArrayValueForKey:@"rows"] removeObjectAtIndex:sourceIP.row];
-  [[self mutableArrayValueForKey:@"rows"]        insertObject:object atIndex:destinationIP.row];
+  [_rows removeObjectAtIndex:sourceIP.row];
+//  UITableViewCell *r = [self.tableView ]
+  [_rows        insertObject:object
+                     atIndex:destinationIP.row];
 }
 
-- (void)gestureRecognizer:(JTTableViewGestureRecognizer*)gRec needsReplacePlaceholderForRowAtIndexPath:(NSIndexPath*)ip{
+GRMethod(void) needsReplacePlaceholderForRowAtIndexPath:(NSIndexPath*)ip{
 
-  [[self mutableArrayValueForKey:@"rows"] insertObject:self.grabbedObject atIndex:ip.row];
+  self.rows[ip.row] = self.grabbedObject;
   self.grabbedObject = nil;
 }
 

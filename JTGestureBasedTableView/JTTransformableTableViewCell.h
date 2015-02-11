@@ -25,8 +25,8 @@ typedef NS_ENUM(int, JTTransformableTableViewCellStyle) { JTTransformableTableVi
 // Use the factory method below instead of
 //- initWithStyle:(UITableViewCellStyle)s reuseIdentifier:(NSString *)_ __attribute__((unavailable));
 
-+ (JTTransformableTableViewCell*) transformableTableViewCellWithStyle:(JTTransformableTableViewCellStyle)s
-                                                      reuseIdentifier:(NSString*)_;
++ (instancetype) transformableTableViewCellWithStyle:(JTTransformableTableViewCellStyle)s
+                                     reuseIdentifier:(NSString*)_;
 @end
 
 
